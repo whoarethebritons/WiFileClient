@@ -27,7 +27,7 @@ import javax.swing.SwingUtilities;
  * @author Eden
  */
 public class WiFile extends javax.swing.JFrame implements ServiceListener {
-        JmDNS mJmdns;
+        static JmDNS mJmdns;
         ServiceInfo current;
         DefaultListModel services = new DefaultListModel();
         final static String TYPE = "_ftp._tcp.local.";
@@ -262,20 +262,24 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
 
     private void ConnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConnectButtonActionPerformed
         // TODO add your handling code here:
-        if(current != null) {
-            try {
-                Socket sock = new Socket(current.getAddress(), current.getPort());
-                DataInputStream is = new DataInputStream(sock.getInputStream());
-                int input = is.readInt();
-                System.out.println(input);
-                //WiFileClient wfc = new WiFileClient(info.getInetAddress(), input);
-                System.out.println("success");
-                sock.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+        Pearin p = new Pearin(this, true);
+        p.setVisible(true);
+        
+        if(p.getReturnStatus() == 1) {
+            if(current != null) {
+                try {
+                    Socket sock = new Socket(current.getAddress(), current.getPort());
+                    DataInputStream is = new DataInputStream(sock.getInputStream());
+                    int input = is.readInt();
+                    System.out.println(input);
+                    //WiFileClient wfc = new WiFileClient(info.getInetAddress(), input);
+                    System.out.println("success");
+                    sock.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
-        
     }//GEN-LAST:event_ConnectButtonActionPerformed
 
     private void serviceListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_serviceListValueChanged
@@ -320,7 +324,19 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
             java.util.logging.Logger.getLogger(WiFile.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-
+        Runtime.getRuntime().addShutdownHook(new Thread()
+            {
+                @Override
+                public void run()
+                {
+                    System.out.println("Shutdown hook ran!");
+                    try {
+                        mJmdns.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -337,6 +353,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                 }
             }
         });
+        
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
