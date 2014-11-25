@@ -1,229 +1,358 @@
-import javax.jmdns.*;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.logging.ConsoleHandler;
+import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceEvent;
+import javax.jmdns.ServiceInfo;
+import javax.jmdns.ServiceListener;
+import javax.jmdns.ServiceTypeListener;
+import javax.swing.DefaultListModel;
+import javax.swing.JList;
+import javax.swing.SwingUtilities;
 
-
-public class WiFile implements ServiceListener, ServiceTypeListener {
-    JmDNS mJmdns;
-    WiFile() {
-        try {
-
-            // Activate these lines to see log messages of JmDNS
-            boolean log = true;
-            if (log) {
-                Logger logger = Logger.getLogger(JmDNS.class.getName());
-                ConsoleHandler handler = new ConsoleHandler();
-                logger.addHandler(handler);
-                logger.setLevel(Level.FINER);
-                handler.setLevel(Level.FINER);
-            }
-
-            //final WiFileService wf = new WiFileService();
-            InetAddress mIP = InetAddress.getLocalHost();
-            String mHostname = InetAddress.getByName(mIP.getHostName()).toString();
-            System.out.println(mIP.toString());
-
-            JmDNS jmdns = JmDNS.create(mIP, mHostname);
-            this.mJmdns = jmdns;
-            mJmdns.addServiceListener("_ftp._tcp", this);
-
-            //jmdns.addServiceTypeListener(sl);
-            //jmdns.registerService(wf.registerWiFile());
-            String list[] = new String[] {
-                    "_http._tcp.local.",
-                    "_ftp._tcp.local.",
-                    "_tftp._tcp.local.",
-                    "_ssh._tcp.local.",
-                    "_smb._tcp.local.",
-                    "_printer._tcp.local.",
-                    "_airport._tcp.local.",
-                    "_afpovertcp._tcp.local.",
-                    "_ichat._tcp.local.",
-                    "_eppc._tcp.local.",
-                    "_presence._tcp.local."
-            };
-
-            for (int i = 0 ; i < list.length ; i++) {
-                mJmdns.addServiceListener(list[i], this);
-            }
-            Runtime.getRuntime().addShutdownHook(new Thread()
-            {
-                @Override
-                public void run()
-                {
-                    System.out.println("Shutdown hook ran!");
-                    try {
-                        getjm().close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-            System.out.println("Press q and Enter, to quit");
-            int b;
-            while ((b = System.in.read()) != -1 && (char) b != 'q') {
-            /* Stub */
-                //jmdns.addServiceListener("_ftp._tcp.", sl);
-            }
-            jmdns.close();
-            System.out.println("Done");
-
-        } catch (IOException e) {
-            e.printStackTrace();
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+/**
+ *
+ * @author Eden
+ */
+public class WiFile extends javax.swing.JFrame implements ServiceListener {
+        JmDNS mJmdns;
+        ServiceInfo current;
+        DefaultListModel services = new DefaultListModel();
+        final static String TYPE = "_ftp._tcp.local.";
+        WiFile(JmDNS jmdns) {
+            initComponents();
+            mJmdns = jmdns;
+            mJmdns.addServiceListener(TYPE, this);
         }
-    }
-
-    class ServerInfo{
-        String mType;
-        String mName;
-        String mIP;
-        int mPort;
-        public ServerInfo(String inType, String inName, String inIP, int inPort) {
-            mType = inType;
-            mName = inName;
-            mIP = inIP;
-            mPort = inPort;
-        }
-        public boolean has(String s) {
-            if (mName.contains(s)) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        public String toString() {
-            return mIP + "|" + mPort;
-        }
-    };
-    ArrayList<ServerInfo> servicesfound = new ArrayList<ServerInfo>();
-        public ArrayList<ServerInfo> getinf() {
-            ArrayList<ServerInfo> found = new ArrayList<ServerInfo>();
-            for(ServerInfo s: servicesfound) {
-                if(s.has("NsdWiFile")){
-                    found.add(s);
-                }
-            }
-            return found;
-        }
-
-
+        
+        
         @Override
         public void serviceAdded(ServiceEvent event) {
-            System.out.println("Service added   : " + event.getName() + "." + event.getType());
-            mJmdns.requestServiceInfo(event.getType(), event.getName());
+            //System.out.println("Service added   : " + event.getName() + "." + event.getType());
+            final String name = event.getName();
+        
+            System.out.println("ADD: " + name);
+            SwingUtilities.invokeLater(new Runnable() {
+            public void run() { services.addElement(name); }
+            });
+            //mJmdns.requestServiceInfo(event.getType(), event.getName());
         }
 
         @Override
         public void serviceRemoved(ServiceEvent event) {
-            System.out.println("Service removed : " + event.getName() + "." + event.getType());
+            final String name = event.getName();
+
+            System.out.println("REMOVE: " + name);
+            SwingUtilities.invokeLater(new Runnable() {
+            public void run() { services.removeElement(name); }
+            });
         }
 
         @Override
         public void serviceResolved(ServiceEvent event) {
-            try {
-                System.out.println("Service resolved: " + event.getInfo());
-                String name = event.getName();
-                String type = event.getType();
-                ServiceInfo info = event.getInfo();
-                String ret;
-                if (info == null) {
-                    ret = "service not found";
-                    System.out.println(ret);
-                } else {
-                    //ServerInfo s = new ServerInfo(name, type, info.getInetAddress().toString(), info.getPort());
-                  /*
-                  StringBuilder buf = new StringBuilder();
-                  buf.append(name);
-                  buf.append('.');
-                  buf.append(type);
-                  buf.append('\n');
-                  buf.append(info.getServer());
-                  buf.append(':');
-                  buf.append(info.getPort());
-                  buf.append('\n');
-                  buf.append(info.getInetAddress());
-                  buf.append(':');
-                  buf.append(info.getPort());
-                  buf.append('\n');
+            String name = event.getName();
+        String type = event.getType();
+        ServiceInfo info = event.getInfo();
 
-                  for (Enumeration names = info.getPropertyNames() ; names.hasMoreElements() ; ) {
-                      String prop = (String)names.nextElement();
-                      buf.append(prop);
-                      buf.append('=');
-                      buf.append(info.getPropertyString(prop));
-                      buf.append('\n');
-                  }
-
-                  ret = buf.toString();
-                  */
-                    ServerInfo s = new ServerInfo(name, type, info.getInetAddress().toString(), info.getPort());
-                    servicesfound.add(s);
-                    //System.out.println(s);
-                    System.out.println(name + '.' + type + '\n' + info.getServer() + ':' + info.getPort() + '\n' +
-                            info.getInetAddress() + ':' + info.getPort());
-                    DataInputStream is=null;
-
-                    Socket sock=null;
-                    try {
-                        sock = new Socket(info.getAddress(), info.getPort());
-                        System.out.println("socket grabbed");
-                        is = new DataInputStream(sock.getInputStream());
-                        int input = is.readInt();
-                        System.out.println(input);
-                        WiFileClient wfc = new WiFileClient(info.getAddress(), input);
-                        System.out.println("success");
-                        sock.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }finally{
-                        //fos.close();
-                        try {
-                            is.close();
-                            sock.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
+        if (name.equals(serviceList.getSelectedValue())) {
+            if (info == null) {
+                this.info.setText("service not found");
+            } else {
+                StringBuilder buf = new StringBuilder();
+                buf.append(name);
+                buf.append('.');
+                buf.append(type);
+                buf.append('\n');
+                buf.append(info.getAddress());
+                buf.append(':');
+                buf.append(info.getPort());
+                buf.append('\n');
+                for (Enumeration names = info.getPropertyNames() ; names.hasMoreElements() ; ) {
+                    String prop = (String)names.nextElement();
+                    buf.append(prop);
+                    buf.append('=');
+                    buf.append(info.getPropertyString(prop));
+                    buf.append('\n');
                 }
-            }catch (StringIndexOutOfBoundsException e) {
+                
+                this.info.setText(buf.toString());
+            }
+        }
+        }
+        
+    /**
+     * Creates new form WiFile
+     */
+    public WiFile(){
+        initComponents();
+        
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        RestartButton = new javax.swing.JButton();
+        StopButton = new javax.swing.JButton();
+        label1 = new java.awt.Label();
+        label2 = new java.awt.Label();
+        StartButton = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        info = new javax.swing.JTextArea();
+        ConnectButton = new javax.swing.JButton();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        serviceList = new javax.swing.JList();
+        jMenuBar1 = new javax.swing.JMenuBar();
+        jMenu1 = new javax.swing.JMenu();
+        jMenu2 = new javax.swing.JMenu();
+        jMenuItem1 = new javax.swing.JMenuItem();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        RestartButton.setText("Restart");
+        RestartButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                RestartButtonActionPerformed(evt);
+            }
+        });
+
+        StopButton.setText("Stop");
+        StopButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                StopButtonActionPerformed(evt);
+            }
+        });
+
+        label1.setText("Available Devices");
+
+        label2.setText("Information");
+
+        StartButton.setText("Start");
+        StartButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                StartButtonActionPerformed(evt);
+            }
+        });
+
+        info.setColumns(20);
+        info.setRows(5);
+        jScrollPane1.setViewportView(info);
+
+        ConnectButton.setText("Connect to Service");
+        ConnectButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ConnectButtonActionPerformed(evt);
+            }
+        });
+
+        serviceList = new JList(services);
+        serviceList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                serviceListValueChanged(evt);
+            }
+        });
+        jScrollPane2.setViewportView(serviceList);
+
+        jMenu1.setText("File");
+        jMenuBar1.add(jMenu1);
+
+        jMenu2.setText("Settings");
+
+        jMenuItem1.setText("jMenuItem1");
+        jMenu2.add(jMenuItem1);
+
+        jMenuBar1.add(jMenu2);
+
+        setJMenuBar(jMenuBar1);
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(StopButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(RestartButton, javax.swing.GroupLayout.DEFAULT_SIZE, 70, Short.MAX_VALUE)
+                    .addComponent(StartButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(label1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(label2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(13, 13, 13))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addComponent(ConnectButton)
+                        .addGap(32, 32, 32))))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(label1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(label2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(13, 13, 13)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(StartButton)
+                                .addGap(7, 7, 7)
+                                .addComponent(RestartButton)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(StopButton))
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(ConnectButton)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 235, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void RestartButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RestartButtonActionPerformed
+        // TODO add your handling code here:
+        if(mJmdns == null) {
+            mJmdns.addServiceListener(TYPE, this);
+        }
+    }//GEN-LAST:event_RestartButtonActionPerformed
+
+    private void StopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StopButtonActionPerformed
+        // TODO add your handling code here:
+        try {
+            mJmdns.close();
+            System.out.println("service discovery stopped");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }//GEN-LAST:event_StopButtonActionPerformed
+
+    private void StartButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartButtonActionPerformed
+        // TODO add your handling code here:
+        if(mJmdns == null) {
+            mJmdns.addServiceListener(TYPE, this);
+        } else {
+            //notify that it is already discovering
+        }
+    }//GEN-LAST:event_StartButtonActionPerformed
+
+    private void ConnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConnectButtonActionPerformed
+        // TODO add your handling code here:
+        if(current != null) {
+            try {
+                Socket sock = new Socket(current.getAddress(), current.getPort());
+                DataInputStream is = new DataInputStream(sock.getInputStream());
+                int input = is.readInt();
+                System.out.println(input);
+                //WiFileClient wfc = new WiFileClient(info.getInetAddress(), input);
+                System.out.println("success");
+                sock.close();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
-        public void serviceTypeAdded(ServiceEvent event) {
-            String type = event.getType();
+        
+    }//GEN-LAST:event_ConnectButtonActionPerformed
 
-            System.out.println("TYPE: " + type);
-            //String type = event.getType();
+    private void serviceListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_serviceListValueChanged
+        // TODO add your handling code here:
+        String name = (String)serviceList.getSelectedValue();
+        if (name == null) {
+            info.setText("unknown");
+        } else {
+            //System.out.flush();
+            current = mJmdns.getServiceInfo(TYPE, name);
+            if (current == null) {
+                info.setText("service not found");
+            } else {
+                mJmdns.requestServiceInfo(TYPE, name);
+            }
         }
-        public void subTypeForServiceTypeAdded(ServiceEvent event) {
+    }//GEN-LAST:event_serviceListValueChanged
 
-        }
-
-
-    public ServiceInfo registerWiFile() {
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
         try {
-            ServerSocket s = new ServerSocket(0);
-            int wfPort = s.getLocalPort();
-            return ServiceInfo.create("_ftp._tcp.", "DNS-WiFile", wfPort,
-                    "computer WiFile service");
-        } catch (IOException e) {
-            return null;
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(WiFile.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(WiFile.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(WiFile.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(WiFile.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-    }
-    public JmDNS getjm() {
-        return mJmdns;
-    }
-    public static void main(String[] args) {
+        //</editor-fold>
 
-        new WiFile();
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    InetAddress mIP;
+                    mIP = InetAddress.getLocalHost();
+                    String mHostname = InetAddress.getByName(mIP.getHostName()).toString();
+                    System.out.println(mIP.toString());
+                    new WiFile(JmDNS.create(mIP, mHostname)).setVisible(true);
+                } catch (UnknownHostException ex) {
+                    Logger.getLogger(WiFile.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(WiFile.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
     }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton ConnectButton;
+    private javax.swing.JButton RestartButton;
+    private javax.swing.JButton StartButton;
+    private javax.swing.JButton StopButton;
+    private javax.swing.JTextArea info;
+    private javax.swing.JMenu jMenu1;
+    private javax.swing.JMenu jMenu2;
+    private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenuItem jMenuItem1;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private java.awt.Label label1;
+    private java.awt.Label label2;
+    private javax.swing.JList serviceList;
+    // End of variables declaration//GEN-END:variables
 }
