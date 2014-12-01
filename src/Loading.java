@@ -1,3 +1,18 @@
+
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.DataInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.SwingWorker;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -7,13 +22,43 @@
  *
  * @author Eden
  */
-public class Loading extends javax.swing.JFrame {
-
+public class Loading extends javax.swing.JFrame implements 
+                                        PropertyChangeListener{
+    InetAddress mIp;
+    int mPort, returnPort;
+    Client task;
+    PortClient other;
+    boolean FILE_TRANSFER = false;
+    boolean PORT_TRANSFER = true;
+    boolean whichOne;
     /**
      * Creates new form Loading
      */
     public Loading() {
         initComponents();
+    }
+    
+    public Loading(InetAddress inIP, int inPort, boolean inBool) {
+        mIp = inIP;
+        mPort = inPort;
+        whichOne = inBool;
+        
+        initComponents();
+        other = new PortClient();
+        other.execute();
+        try {
+            System.out.println(other.get());
+            if(other.get() != 0) {
+                mPort = other.get();
+                task = new Client();
+                task.addPropertyChangeListener(this);
+                task.execute();
+            }
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Loading.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(Loading.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -30,6 +75,7 @@ public class Loading extends javax.swing.JFrame {
         fileupdate = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setMinimumSize(new java.awt.Dimension(400, 156));
 
         jLabel1.setText("Transferring Files");
 
@@ -59,6 +105,96 @@ public class Loading extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    class Client extends SwingWorker <Void, Void> {
+        //int bufferSize = 0;
+        
+        @Override
+        protected Void doInBackground() {//throws Exception {
+            System.out.println("ip: " + mIp + " port: " + mPort);
+            
+            try{
+                Socket sock = new Socket(mIp, mPort);
+                System.out.println("socket created");
+                InputStream is = null;
+                FileOutputStream fos = null;
+                DataInputStream dis = null;
+                //Socket sock = new Socket(ip, port);
+                    System.out.println("second one running");
+                    try{
+                        System.out.println("client created");
+                        int bufferSize=sock.getReceiveBufferSize();
+                        System.out.println("or here 1");
+                        byte[] mybytearray = new byte[bufferSize];
+                        System.out.println("or here 2");
+                        is = sock.getInputStream();
+                        System.out.println("or here 3");
+                        fos = new FileOutputStream("thisthing.png");
+                        System.out.println("or here 4");
+                        int bytesRead;
+                        System.out.println("or here 5");
+                        while( (bytesRead = is.read(mybytearray)) > 0) {
+                            fos.write(mybytearray, 0, bytesRead);
+                            setProgress(Math.min(bufferSize, 100));
+                        }
+                    } 
+                     finally{
+                        fos.close();
+                        is.close();
+                        sock.close();
+                    }
+            }catch(Exception e) {
+                System.out.println("exception caught:" + e.getMessage());
+            }
+                
+                //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            
+            
+            return null;
+        }
+        
+    }
+    class PortClient extends SwingWorker <Integer, Void> {
+
+        @Override
+        protected Integer doInBackground() throws Exception {
+            try{
+                Socket sock = new Socket(mIp, mPort);
+                System.out.println(sock.getPort());
+                System.out.println("socket created");
+                InputStream is = null;
+                FileOutputStream fos = null;
+                DataInputStream dis = null;
+                System.out.println("first one going");
+                    try {
+                        System.out.println("I AM HERE");
+                        System.out.println("or here");
+                        dis = new DataInputStream(sock.getInputStream());
+                        System.out.println("or here");
+                        int input = dis.readInt();
+                        returnPort = input;
+                        System.out.println(returnPort);
+                    } catch (ConnectException e) {
+                        System.out.println("connect exception caught");
+                        /*
+                        Pearin f = new Pearin(this, true);
+                        f.setVisible(true);
+                        f.setLabel("Connection failed");
+                        */
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        dis.close();
+                        sock.close();
+                    }      
+                    }catch(Exception e) {
+                System.out.println("exception caught:" + e.getMessage());
+            }
+            return returnPort;
+//throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+        
+    }
+    
     /**
      * @param args the command line arguments
      */
@@ -93,9 +229,19 @@ public class Loading extends javax.swing.JFrame {
             }
         });
     }
+    public int getPort() {
+        return returnPort;
+    }
     
     public javax.swing.JProgressBar getProgress() {
         return jProgressBar1;
+    }
+    public void propertyChange(PropertyChangeEvent evt) {
+        if ("progress".equals(evt.getPropertyName())) {
+            int progress = (Integer) evt.getNewValue();
+            System.out.println("progress: " + progress);
+            jProgressBar1.setValue(progress);
+        } 
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

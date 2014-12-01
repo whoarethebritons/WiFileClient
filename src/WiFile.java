@@ -1,6 +1,10 @@
 
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -8,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
@@ -31,8 +36,16 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         ServiceInfo current;
         DefaultListModel services = new DefaultListModel();
         final static String TYPE = "_ftp._tcp.local.";
+        BufferedImage icon;
         WiFile(JmDNS jmdns) {
+            try{
+                BufferedImage icon = ImageIO.read(new File("C:/Users/Eden/workspace/WiFileClient/wifileicon.png"));
+            }
+            catch(IOException e) {
+                e.printStackTrace();
+            }
             initComponents();
+            
             mJmdns = jmdns;
             mJmdns.addServiceListener(TYPE, this);
         }
@@ -125,6 +138,9 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         jMenuItem1 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("WiFile");
+        setIconImage(icon);
+        setIconImages(null);
 
         RestartButton.setText("Restart");
         RestartButton.addActionListener(new java.awt.event.ActionListener() {
@@ -266,18 +282,47 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         p.setVisible(true);
         
         if(p.getReturnStatus() == 1) {
-            if(current != null) {
+            Pearin f = new Pearin(this, true);
+                    f.setVisible(true);
+                    f.setLabel("Connection failed");
+                    
+            if(current != null && current.hasData()) {
+                /*java.awt.EventQueue.invokeLater(new Runnable() {
+                        public void run() {*/
+                /*
                 try {
+                    
+                    System.out.println("I AM HERE");
                     Socket sock = new Socket(current.getAddress(), current.getPort());
+                    System.out.println("or here");
                     DataInputStream is = new DataInputStream(sock.getInputStream());
+                    System.out.println("or here");
                     int input = is.readInt();
                     System.out.println(input);
+                    sock.close();
+                    */
+                Loading load1 = new Loading(current.getInetAddress(), current.getPort(), true);
+                              
+                
+                    load1.setVisible(true);
+                
+                        
                     //WiFileClient wfc = new WiFileClient(info.getInetAddress(), input);
                     System.out.println("success");
-                    sock.close();
+                 /*   
+                } catch (ConnectException e) {
+                    System.out.println("connect exception caught");
+                    return;
+                    /*
+                    Pearin f = new Pearin(this, true);
+                    f.setVisible(true);
+                    f.setLabel("Connection failed");
+                    
                 } catch (IOException e) {
                     e.printStackTrace();
-                }
+                } 
+                    */
+                //}});
             }
         }
     }//GEN-LAST:event_ConnectButtonActionPerformed
@@ -290,7 +335,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         } else {
             //System.out.flush();
             current = mJmdns.getServiceInfo(TYPE, name);
-            if (current == null) {
+            if (current == null || !current.hasData()) {
                 info.setText("service not found");
             } else {
                 mJmdns.requestServiceInfo(TYPE, name);
