@@ -159,13 +159,17 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
             {
                 JFrame frame = (JFrame)e.getSource();
                 frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                try {
-                    mJmdns.close();
-                    System.out.println("closed");
-                    mOpen = false;
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
+                java.awt.EventQueue.invokeLater(new Runnable() {
+                    public void run() {
+                        try {
+                            mJmdns.close();
+                            System.out.println("closed");
+                            mOpen = false;
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                });
             }
         });
         setTitle("WiFile");
@@ -287,28 +291,47 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
 
     private void RestartButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RestartButtonActionPerformed
         // TODO add your handling code here:
-        if(mJmdns == null) {
-            mJmdns.addServiceListener(TYPE, this);
-        }
+
+        StopButtonActionPerformed(evt);
+        StartButtonActionPerformed(evt);
     }//GEN-LAST:event_RestartButtonActionPerformed
 
     private void StopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StopButtonActionPerformed
         // TODO add your handling code here:
-        try {
-            mJmdns.close();
-            System.out.println("service discovery stopped");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    mJmdns.close();
+                    serviceList.removeAll();
+                    System.out.println("service discovery stopped");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }//GEN-LAST:event_StopButtonActionPerformed
 
     private void StartButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartButtonActionPerformed
         // TODO add your handling code here:
-        if(mJmdns == null) {
-            mJmdns.addServiceListener(TYPE, this);
-        } else {
-            //notify that it is already discovering
-        }
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                if (mJmdns == null) {
+                    try {
+                        InetAddress mIP;
+                        mIP = InetAddress.getLocalHost();
+                        String mHostname = InetAddress.getByName(mIP.getHostName()).toString();
+                        System.out.println(mIP.toString());
+                        setmJmdns(JmDNS.create(mIP, mHostname));
+                        System.out.println("I'm back baby");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    //mJmdns.addServiceListener(TYPE, this);
+                } else {
+                    //notify that it is already discovering
+                }
+            }
+        });
     }//GEN-LAST:event_StartButtonActionPerformed
 
     private void ConnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConnectButtonActionPerformed

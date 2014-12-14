@@ -57,7 +57,10 @@ public class Loading extends javax.swing.JFrame implements
                 task.addPropertyChangeListener(this);
                 task.execute();
             } else {
-
+                JOptionPane.showMessageDialog(f,
+                        "Connection Denied",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         } catch (InterruptedException ex) {
             Logger.getLogger(Loading.class.getName()).log(Level.SEVERE, null, ex);
@@ -191,10 +194,10 @@ public class Loading extends javax.swing.JFrame implements
                  finally{
                     System.out.println("I am here");
                 }
-            }catch(Exception e) {
+            }catch(final Exception e) {
                 System.out.println("exception caught:" + e.getMessage());
                 JOptionPane.showMessageDialog(f,
-                        "Eggs are not supposed to be green.",
+                        e.getMessage(),
                         "meh error",
                         JOptionPane.ERROR_MESSAGE);
             }
@@ -247,7 +250,7 @@ public class Loading extends javax.swing.JFrame implements
                     } catch (ConnectException e) {
                         System.out.println("connect exception caught");
                         JOptionPane.showMessageDialog(f,
-                                "Eggs are not supposed to be green.",
+                                "Cannot connect!",
                                 "erg error",
                                 JOptionPane.ERROR_MESSAGE);
                     } catch (IOException e) {
@@ -256,13 +259,13 @@ public class Loading extends javax.swing.JFrame implements
                         sockInput.close();
                         sock.close();
                     }      
-                    }catch(Exception e) {
+                    }catch(final Exception e) {
                 System.out.println("exception caught:" + e.getMessage());
                 java.awt.EventQueue.invokeLater(new Runnable() {
                     public void run() {
                         JOptionPane.showMessageDialog(f,
-                                "Eggs are not supposed to be green.",
-                                "this error",
+                                e.getMessage(),
+                                "Error",
                                 JOptionPane.ERROR_MESSAGE);
                     }
                 });
