@@ -1,17 +1,13 @@
-
+import javax.swing.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.DataInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.SwingWorker;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -30,7 +26,9 @@ public class Loading extends javax.swing.JFrame implements
     PortClient other;
     boolean FILE_TRANSFER = false;
     boolean PORT_TRANSFER = true;
+    String location;
     boolean whichOne;
+    JFrame f = this;
     /**
      * Creates new form Loading
      */
@@ -42,17 +40,24 @@ public class Loading extends javax.swing.JFrame implements
         mIp = inIP;
         mPort = inPort;
         whichOne = inBool;
-        
+        location = WiFile.mProperties.getProperty(WiFile.FILE_KEY, "");
+        if(!location.endsWith("\\") && !location.equals("")) {
+            location += "\\";
+        }
         initComponents();
         other = new PortClient();
         other.execute();
         try {
             System.out.println(other.get());
+
             if(other.get() != 0) {
+                this.setVisible(true);
                 mPort = other.get();
                 task = new Client();
                 task.addPropertyChangeListener(this);
                 task.execute();
+            } else {
+
             }
         } catch (InterruptedException ex) {
             Logger.getLogger(Loading.class.getName()).log(Level.SEVERE, null, ex);
@@ -74,7 +79,7 @@ public class Loading extends javax.swing.JFrame implements
         jLabel1 = new javax.swing.JLabel();
         fileupdate = new javax.swing.JLabel();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setMinimumSize(new java.awt.Dimension(400, 156));
 
         jLabel1.setText("Transferring Files");
@@ -111,45 +116,106 @@ public class Loading extends javax.swing.JFrame implements
         @Override
         protected Void doInBackground() {//throws Exception {
             System.out.println("ip: " + mIp + " port: " + mPort);
+            Socket sock = null;
+            DataInputStream sockInput = null;
+            DataOutputStream sockOutput = null;
             
             try{
-                Socket sock = new Socket(mIp, mPort);
+                sock = new Socket(mIp, mPort);
                 System.out.println("socket created");
-                InputStream is = null;
-                FileOutputStream fos = null;
-                DataInputStream dis = null;
+                int received = 0;
+                sockInput = new DataInputStream(sock.getInputStream());
+                sockOutput = new DataOutputStream(sock.getOutputStream());
+                
+                //how many received
+                sockOutput.writeInt(received);
+
+                //how many files want to be sent
+                int whileloop = sockInput.readInt();
+
                 //Socket sock = new Socket(ip, port);
-                    System.out.println("second one running");
-                    try{
-                        System.out.println("client created");
-                        int bufferSize=sock.getReceiveBufferSize();
-                        System.out.println("or here 1");
-                        byte[] mybytearray = new byte[bufferSize];
-                        System.out.println("or here 2");
-                        is = sock.getInputStream();
-                        System.out.println("or here 3");
-                        fos = new FileOutputStream("thisthing.png");
+                System.out.println("second one running");
+                try{
+                    System.out.println("client created");
+
+                    System.out.println("loop " + whileloop);
+                    System.out.println("or here 1");
+                    int n = 0;
+
+                    System.out.println("or here 2");
+                    for(int i = 0; i < whileloop; i++) {
+                        //setProgress(0);
+                        //long bufferSize = sockInput.readLong();
+
+                        long fileSize = sockInput.readLong();
+                        System.out.println(fileSize);
+                        byte[] mybytearray = new byte[(int)fileSize];
+                        //jProgressBar1.setMaximum((int)fileSize);
+
+                        String filename = sockInput.readUTF();
+                        System.out.println(filename);
+
+                        jProgressBar1.setString("Transferring: " + filename);
+                        FileOutputStream dfos = new FileOutputStream(location + filename);
                         System.out.println("or here 4");
                         int bytesRead;
                         System.out.println("or here 5");
-                        while( (bytesRead = is.read(mybytearray)) > 0) {
-                            fos.write(mybytearray, 0, bytesRead);
-                            setProgress(Math.min(bufferSize, 100));
+
+
+                        while (fileSize > 0 && (n = sockInput.read(mybytearray, 0, (int)Math.min(mybytearray.length, fileSize))) != -1)
+                        {
+                            //System.out.println(n);
+                            dfos.write(mybytearray,0,n);
+                            //System.out.println(((mybytearray.length - fileSize)/mybytearray.length)*100);
+                            double percent = ((double)n/(double)mybytearray.length)*100;
+                            System.out.println(percent);
+                            setProgress(Math.min((int)fileSize, 100));
+                            //setProgress(Math.min(mybytearray.length, 100));
+                            fileSize -= n;
                         }
-                    } 
-                     finally{
-                        fos.close();
-                        is.close();
-                        sock.close();
+                        System.out.println("hereish");
+                        dfos.flush();
+                        System.out.println("not me");
+                        dfos.close();
+
+                        received++;
+                        double percent = ((double)received/(double)whileloop) * 100;
+                        System.out.println(percent);
+                        //setProgress(Math.min((int)percent, 100));
+                        System.out.println("me");
+
+                        sockOutput.writeInt(received);
+                        System.out.println("or me :(");
                     }
+                }
+                 finally{
+                    System.out.println("I am here");
+                }
             }catch(Exception e) {
                 System.out.println("exception caught:" + e.getMessage());
+                JOptionPane.showMessageDialog(f,
+                        "Eggs are not supposed to be green.",
+                        "meh error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+            finally {
+                try {
+                    sock.close();
+                    sockInput.close();
+                    sockOutput.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
                 
                 //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
             
             
             return null;
+        }
+        @Override
+        public void done() {
+            dispose();
         }
         
     }
@@ -163,31 +229,44 @@ public class Loading extends javax.swing.JFrame implements
                 System.out.println("socket created");
                 InputStream is = null;
                 FileOutputStream fos = null;
-                DataInputStream dis = null;
+                DataInputStream sockInput = null;
                 System.out.println("first one going");
                     try {
                         System.out.println("I AM HERE");
                         System.out.println("or here");
-                        dis = new DataInputStream(sock.getInputStream());
+                        sockInput = new DataInputStream(sock.getInputStream());
                         System.out.println("or here");
-                        int input = dis.readInt();
+                        int input = 0;
+                        try {
+                            input = sockInput.readInt();
+                        }catch(EOFException e) {
+                            //server done transferring
+                        }
                         returnPort = input;
                         System.out.println(returnPort);
                     } catch (ConnectException e) {
                         System.out.println("connect exception caught");
-                        /*
-                        Pearin f = new Pearin(this, true);
-                        f.setVisible(true);
-                        f.setLabel("Connection failed");
-                        */
+                        JOptionPane.showMessageDialog(f,
+                                "Eggs are not supposed to be green.",
+                                "erg error",
+                                JOptionPane.ERROR_MESSAGE);
                     } catch (IOException e) {
                         e.printStackTrace();
                     } finally {
-                        dis.close();
+                        sockInput.close();
                         sock.close();
                     }      
                     }catch(Exception e) {
                 System.out.println("exception caught:" + e.getMessage());
+                java.awt.EventQueue.invokeLater(new Runnable() {
+                    public void run() {
+                        JOptionPane.showMessageDialog(f,
+                                "Eggs are not supposed to be green.",
+                                "this error",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                });
+
             }
             return returnPort;
 //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -222,7 +301,7 @@ public class Loading extends javax.swing.JFrame implements
         }
         //</editor-fold>
 
-        /* Create and display the form */
+        /* Create and sockInputplay the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new Loading().setVisible(true);
@@ -237,11 +316,15 @@ public class Loading extends javax.swing.JFrame implements
         return jProgressBar1;
     }
     public void propertyChange(PropertyChangeEvent evt) {
+        int progress = task.getProgress();
+        System.out.println("progress: " + progress);
+        jProgressBar1.setValue(progress);
+        /*
         if ("progress".equals(evt.getPropertyName())) {
             int progress = (Integer) evt.getNewValue();
-            System.out.println("progress: " + progress);
+
             jProgressBar1.setValue(progress);
-        } 
+        } */
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

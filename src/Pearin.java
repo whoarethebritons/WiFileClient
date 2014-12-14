@@ -3,14 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import javax.swing.AbstractAction;
-import javax.swing.ActionMap;
-import javax.swing.InputMap;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.KeyStroke;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
 /**
  *
@@ -26,6 +27,7 @@ public class Pearin extends javax.swing.JDialog {
      * A return status code - returned if OK button has been pressed
      */
     public static final int RET_OK = 1;
+
 
     /**
      * Creates new form Pearin
@@ -88,11 +90,21 @@ public class Pearin extends javax.swing.JDialog {
                 cancelButtonActionPerformed(evt);
             }
         });
+        //ImageIcon ic = new javax.swing.ImageIcon("C:\\Users\\Eden\\workspace\\WiFileClient\\pearing.png");
+        try {
+            BufferedImage image = ImageIO.read(new File("C:\\Users\\Eden\\workspace\\WiFileClient\\pearing.png"));
+            BufferedImage resized = resize(image, 150, 150);
+            ImageIcon ic = new ImageIcon((Image) resized);
+            jLabel1.setIcon(ic); // NOI18N
+            jLabel1.setMaximumSize(new java.awt.Dimension(150, 150));
+            jLabel1.setPreferredSize(new java.awt.Dimension(150,150));
+        }
 
-        jLabel1.setIcon(new javax.swing.ImageIcon("C:\\Users\\Eden\\workspace\\WiFileClient\\pearing.png")); // NOI18N
-        jLabel1.setMaximumSize(new java.awt.Dimension(300, 509));
-        jLabel1.setPreferredSize(new java.awt.Dimension(300, 509));
 
+
+        catch (IOException e) {
+            e.printStackTrace();
+        }
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -142,6 +154,15 @@ public class Pearin extends javax.swing.JDialog {
     private void cancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cancelButtonActionPerformed
         doClose(RET_CANCEL);
     }//GEN-LAST:event_cancelButtonActionPerformed
+
+    public static BufferedImage resize(BufferedImage image, int width, int height) {
+        BufferedImage bi = new BufferedImage(width, height, BufferedImage.TRANSLUCENT);
+        Graphics2D g2d = (Graphics2D) bi.createGraphics();
+        g2d.addRenderingHints(new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
+        g2d.drawImage(image, 0, 0, width, height, null);
+        g2d.dispose();
+        return bi;
+    }
 
     /**
      * Closes the dialog

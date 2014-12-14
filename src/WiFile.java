@@ -1,26 +1,21 @@
-
-import java.awt.Image;
-import java.awt.image.BufferedImage;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
-import javax.jmdns.ServiceTypeListener;
-import javax.swing.DefaultListModel;
-import javax.swing.JList;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.UnknownHostException;
+import java.util.Enumeration;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -33,21 +28,45 @@ import javax.swing.SwingUtilities;
  */
 public class WiFile extends javax.swing.JFrame implements ServiceListener {
         static JmDNS mJmdns;
+        static boolean mOpen;
+        ServiceInfo me;
         ServiceInfo current;
         DefaultListModel services = new DefaultListModel();
+        String proplocal = "wifilesettings.properties";
+        static Properties mProperties = new Properties();
+        static String DEVICE_KEY = "DEVICE_NAME_KEY", FILE_KEY = "FILE_LOCATION_KEY";
+        static String FIRST_TIME = "FIRST_TIME_KEY";
         final static String TYPE = "_ftp._tcp.local.";
         BufferedImage icon;
-        WiFile(JmDNS jmdns) {
-            try{
+        public WiFile setmJmdns(JmDNS jmdns) {
+            mJmdns = jmdns;
+            normal();
+            return this;
+        }
+
+        public void normal() {
+            try {
                 BufferedImage icon = ImageIO.read(new File("C:/Users/Eden/workspace/WiFileClient/wifileicon.png"));
-            }
-            catch(IOException e) {
+                String prop = mProperties.getProperty(DEVICE_KEY, "DNS");
+                me = registerWiFile(prop);
+                mJmdns.registerService(me);
+            } catch (IOException e) {
                 e.printStackTrace();
             }
             initComponents();
-            
-            mJmdns = jmdns;
             mJmdns.addServiceListener(TYPE, this);
+        }
+
+        public ServiceInfo registerWiFile(String string) {
+            try {
+                ServerSocket s = new ServerSocket(0);
+                int wfPort = s.getLocalPort();
+                return ServiceInfo.create("_ftp._tcp.local.", string + "WiFile", wfPort,
+                        "computer WiFile service");
+                
+            } catch (IOException e) {
+                return null;
+            }
         }
         
         
@@ -108,10 +127,6 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
     /**
      * Creates new form WiFile
      */
-    public WiFile(){
-        initComponents();
-        
-    }
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -135,9 +150,24 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
-        jMenuItem1 = new javax.swing.JMenuItem();
+        SettingsItem = new javax.swing.JMenuItem();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        //setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        addWindowListener( new WindowAdapter()
+        {
+            public void windowClosing(WindowEvent e)
+            {
+                JFrame frame = (JFrame)e.getSource();
+                frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                try {
+                    mJmdns.close();
+                    System.out.println("closed");
+                    mOpen = false;
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        });
         setTitle("WiFile");
         setIconImage(icon);
         setIconImages(null);
@@ -191,8 +221,13 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
 
         jMenu2.setText("Settings");
 
-        jMenuItem1.setText("jMenuItem1");
-        jMenu2.add(jMenuItem1);
+        SettingsItem.setText("Open Settings");
+        SettingsItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SettingsItemActionPerformed(evt);
+            }
+        });
+        jMenu2.add(SettingsItem);
 
         jMenuBar1.add(jMenu2);
 
@@ -282,10 +317,6 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         p.setVisible(true);
         
         if(p.getReturnStatus() == 1) {
-            Pearin f = new Pearin(this, true);
-                    f.setVisible(true);
-                    f.setLabel("Connection failed");
-                    
             if(current != null && current.hasData()) {
                 /*java.awt.EventQueue.invokeLater(new Runnable() {
                         public void run() {*/
@@ -304,10 +335,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                 Loading load1 = new Loading(current.getInetAddress(), current.getPort(), true);
                               
                 
-                    load1.setVisible(true);
-                
-                        
-                    //WiFileClient wfc = new WiFileClient(info.getInetAddress(), input);
+                    //load1.setVisible(true);
                     System.out.println("success");
                  /*   
                 } catch (ConnectException e) {
@@ -324,6 +352,11 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                     */
                 //}});
             }
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Connection Failed",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_ConnectButtonActionPerformed
 
@@ -343,10 +376,16 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         }
     }//GEN-LAST:event_serviceListValueChanged
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
+    private void SettingsItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SettingsItemActionPerformed
+        // TODO add your handling code here:
+        new Settings().setVisible(true);
+
+    }//GEN-LAST:event_SettingsItemActionPerformed
+
+
+    //public static void main(String args[]) {
+    WiFile() {
+        mOpen = true;
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
@@ -354,10 +393,15 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
+                System.out.println(info.getName());
+                if ("Windows".equals(info.getName())) {
+                    //MetalLookAndFeel.setCurrentTheme(new MetalLookAndFeel.DefaultMetalTheme());
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
+            }
+            if(UIManager.getLookAndFeel() == null) {
+                javax.swing.UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
             }
         } catch (ClassNotFoundException ex) {
             java.util.logging.Logger.getLogger(WiFile.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
@@ -390,7 +434,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                     mIP = InetAddress.getLocalHost();
                     String mHostname = InetAddress.getByName(mIP.getHostName()).toString();
                     System.out.println(mIP.toString());
-                    new WiFile(JmDNS.create(mIP, mHostname)).setVisible(true);
+                    setmJmdns(JmDNS.create(mIP, mHostname)).setVisible(true);
                 } catch (UnknownHostException ex) {
                     Logger.getLogger(WiFile.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
@@ -410,7 +454,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
-    private javax.swing.JMenuItem jMenuItem1;
+    private javax.swing.JMenuItem SettingsItem;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private java.awt.Label label1;
