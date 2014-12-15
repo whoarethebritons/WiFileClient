@@ -9,29 +9,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 /**
  *
  * @author Eden
+ * Two background tasks, one to get port of server
+ * one to transfer files
  */
 public class Loading extends javax.swing.JFrame implements 
                                         PropertyChangeListener{
+    //file transfer variables
     InetAddress mIp;
     int mPort, returnPort;
     Client task;
     PortClient other;
-    boolean FILE_TRANSFER = false;
-    boolean PORT_TRANSFER = true;
     String location;
     boolean whichOne;
+
+    //for use with dialog boxes
     JFrame f = this;
-    /**
-     * Creates new form Loading
-     */
+
     public Loading() {
         initComponents();
     }
@@ -45,18 +41,24 @@ public class Loading extends javax.swing.JFrame implements
             location += "\\";
         }
         initComponents();
+
+        //gets port from phone
         other = new PortClient();
         other.execute();
-        try {
-            System.out.println(other.get());
 
+
+        try {
+            //if the port is not zero, port transfer successful
             if(other.get() != 0) {
+                //progress bar visible
                 this.setVisible(true);
                 mPort = other.get();
+                //client transfers files
                 task = new Client();
                 task.addPropertyChangeListener(this);
                 task.execute();
             } else {
+                //if port was 0 then phone denied access
                 JOptionPane.showMessageDialog(f,
                         "Connection Denied",
                         "Error",
@@ -113,20 +115,21 @@ public class Loading extends javax.swing.JFrame implements
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    //SwingWorker to transfer files
     class Client extends SwingWorker <Void, Void> {
-        //int bufferSize = 0;
         
         @Override
-        protected Void doInBackground() {//throws Exception {
-            System.out.println("ip: " + mIp + " port: " + mPort);
+        protected Void doInBackground() {
             Socket sock = null;
             DataInputStream sockInput = null;
             DataOutputStream sockOutput = null;
             
             try{
+                //make new socket
                 sock = new Socket(mIp, mPort);
-                System.out.println("socket created");
                 int received = 0;
+
+                //get streams
                 sockInput = new DataInputStream(sock.getInputStream());
                 sockOutput = new DataOutputStream(sock.getOutputStream());
                 
@@ -134,71 +137,48 @@ public class Loading extends javax.swing.JFrame implements
                 sockOutput.writeInt(received);
 
                 //how many files want to be sent
-                int whileloop = sockInput.readInt();
+                int loop = sockInput.readInt();
 
-                //Socket sock = new Socket(ip, port);
-                System.out.println("second one running");
-                try{
-                    System.out.println("client created");
+                int n = 0;
 
-                    System.out.println("loop " + whileloop);
-                    System.out.println("or here 1");
-                    int n = 0;
+                //for however many files server wants to send,
+                //do this each time
+                for (int i = 0; i < loop; i++) {
+                    //file size
+                    long fileSize = sockInput.readLong();
+                    //byte array to hold file bytes
+                    byte[] mybytearray = new byte[(int) fileSize];
 
-                    System.out.println("or here 2");
-                    for(int i = 0; i < whileloop; i++) {
-                        //setProgress(0);
-                        //long bufferSize = sockInput.readLong();
+                    //file name
+                    String filename = sockInput.readUTF();
 
-                        long fileSize = sockInput.readLong();
-                        System.out.println(fileSize);
-                        byte[] mybytearray = new byte[(int)fileSize];
-                        //jProgressBar1.setMaximum((int)fileSize);
+                    //file output stream (with location and name)
+                    FileOutputStream dfos = new FileOutputStream(location + filename);
 
-                        String filename = sockInput.readUTF();
-                        System.out.println(filename);
-
-                        jProgressBar1.setString("Transferring: " + filename);
-                        FileOutputStream dfos = new FileOutputStream(location + filename);
-                        System.out.println("or here 4");
-                        int bytesRead;
-                        System.out.println("or here 5");
-
-
-                        while (fileSize > 0 && (n = sockInput.read(mybytearray, 0, (int)Math.min(mybytearray.length, fileSize))) != -1)
-                        {
-                            //System.out.println(n);
-                            dfos.write(mybytearray,0,n);
-                            //System.out.println(((mybytearray.length - fileSize)/mybytearray.length)*100);
-                            double percent = ((double)n/(double)mybytearray.length)*100;
-                            System.out.println(percent);
-                            setProgress(Math.min((int)fileSize, 100));
-                            //setProgress(Math.min(mybytearray.length, 100));
-                            fileSize -= n;
-                        }
-                        System.out.println("hereish");
-                        dfos.flush();
-                        System.out.println("not me");
-                        dfos.close();
-
-                        received++;
-                        double percent = ((double)received/(double)whileloop) * 100;
-                        System.out.println(percent);
-                        //setProgress(Math.min((int)percent, 100));
-                        System.out.println("me");
-
-                        sockOutput.writeInt(received);
-                        System.out.println("or me :(");
+                    while (fileSize > 0 && (n = sockInput.read(mybytearray, 0,
+                            (int) Math.min(mybytearray.length, fileSize))) != -1) {
+                        //writes bytes to array
+                        dfos.write(mybytearray, 0, n);
+                        fileSize -= n;
                     }
+                    //flushes and closes fileoutputstream
+                    dfos.flush();
+                    dfos.close();
+
+                    //we have now received a file, increment
+                    received++;
+
+                    //update progress bar
+                    setProgress(Math.min((int)((double)received/(double)loop)*100, 100));
+
+                    //and send to server
+                    sockOutput.writeInt(received);
                 }
-                 finally{
-                    System.out.println("I am here");
-                }
+
             }catch(final Exception e) {
-                System.out.println("exception caught:" + e.getMessage());
                 JOptionPane.showMessageDialog(f,
                         e.getMessage(),
-                        "meh error",
+                        "Connection Error",
                         JOptionPane.ERROR_MESSAGE);
             }
             finally {
@@ -210,12 +190,10 @@ public class Loading extends javax.swing.JFrame implements
                     e.printStackTrace();
                 }
             }
-                
-                //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            
             
             return null;
         }
+        //when swingworker finishes, get rid of progress bar
         @Override
         public void done() {
             dispose();
@@ -227,40 +205,34 @@ public class Loading extends javax.swing.JFrame implements
         @Override
         protected Integer doInBackground() throws Exception {
             try{
+                //make socket
                 Socket sock = new Socket(mIp, mPort);
-                System.out.println(sock.getPort());
-                System.out.println("socket created");
-                InputStream is = null;
-                FileOutputStream fos = null;
                 DataInputStream sockInput = null;
-                System.out.println("first one going");
+                try {
+                    //get socket input
+                    sockInput = new DataInputStream(sock.getInputStream());
+                    //if port doesn't send over will return 0
+                    //which means client will not connect
+                    int input = 0;
                     try {
-                        System.out.println("I AM HERE");
-                        System.out.println("or here");
-                        sockInput = new DataInputStream(sock.getInputStream());
-                        System.out.println("or here");
-                        int input = 0;
-                        try {
-                            input = sockInput.readInt();
-                        }catch(EOFException e) {
-                            //server done transferring
-                        }
-                        returnPort = input;
-                        System.out.println(returnPort);
-                    } catch (ConnectException e) {
-                        System.out.println("connect exception caught");
-                        JOptionPane.showMessageDialog(f,
-                                "Cannot connect!",
-                                "erg error",
-                                JOptionPane.ERROR_MESSAGE);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } finally {
-                        sockInput.close();
-                        sock.close();
-                    }      
-                    }catch(final Exception e) {
-                System.out.println("exception caught:" + e.getMessage());
+                        //get port
+                        input = sockInput.readInt();
+                    }catch(EOFException e) {
+                        //server done transferring
+                    }
+                    returnPort = input;
+                } catch (ConnectException e) {
+                    JOptionPane.showMessageDialog(f,
+                            "Cannot connect!",
+                            "Connection Error",
+                            JOptionPane.ERROR_MESSAGE);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    sockInput.close();
+                    sock.close();
+                }
+            }catch(final Exception e) {
                 java.awt.EventQueue.invokeLater(new Runnable() {
                     public void run() {
                         JOptionPane.showMessageDialog(f,
@@ -269,47 +241,11 @@ public class Loading extends javax.swing.JFrame implements
                                 JOptionPane.ERROR_MESSAGE);
                     }
                 });
-
             }
             return returnPort;
 //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
         
-    }
-    
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Loading.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Loading.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Loading.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(Loading.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and sockInputplay the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Loading().setVisible(true);
-            }
-        });
     }
     public int getPort() {
         return returnPort;
@@ -318,16 +254,11 @@ public class Loading extends javax.swing.JFrame implements
     public javax.swing.JProgressBar getProgress() {
         return jProgressBar1;
     }
+
+    //progress bar updates
     public void propertyChange(PropertyChangeEvent evt) {
         int progress = task.getProgress();
-        System.out.println("progress: " + progress);
         jProgressBar1.setValue(progress);
-        /*
-        if ("progress".equals(evt.getPropertyName())) {
-            int progress = (Integer) evt.getNewValue();
-
-            jProgressBar1.setValue(progress);
-        } */
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

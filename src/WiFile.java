@@ -1,16 +1,15 @@
-import javax.imageio.ImageIO;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.Properties;
@@ -27,17 +26,24 @@ import java.util.logging.Logger;
  * @author Eden
  */
 public class WiFile extends javax.swing.JFrame implements ServiceListener {
-        static JmDNS mJmdns;
+        //swing variables
         static boolean mOpen;
-        ServiceInfo me;
-        ServiceInfo current;
-        DefaultListModel services = new DefaultListModel();
+        private static final String imageName = "/wifile.jpg";
+        Image icon;
+
+        //variables for properties
         String proplocal = "wifilesettings.properties";
         static Properties mProperties = new Properties();
         static String DEVICE_KEY = "DEVICE_NAME_KEY", FILE_KEY = "FILE_LOCATION_KEY";
-        static String FIRST_TIME = "FIRST_TIME_KEY";
+
+        //service broadcast variables
+        static JmDNS mJmdns;
         final static String TYPE = "_ftp._tcp.local.";
-        BufferedImage icon;
+        ServiceInfo me;
+        ServiceInfo current;
+        DefaultListModel services = new DefaultListModel();
+        String myName;
+
         public WiFile setmJmdns(JmDNS jmdns) {
             mJmdns = jmdns;
             normal();
@@ -46,22 +52,28 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
 
         public void normal() {
             try {
-                BufferedImage icon = ImageIO.read(new File("C:/Users/Eden/workspace/WiFileClient/wifileicon.png"));
+                icon = createImage(imageName, "icon");
+                //passes in saved name value
                 String prop = mProperties.getProperty(DEVICE_KEY, "DNS");
+                //registers service
                 me = registerWiFile(prop);
                 mJmdns.registerService(me);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            //initializes gui
             initComponents();
+            //starts service listener
             mJmdns.addServiceListener(TYPE, this);
         }
 
         public ServiceInfo registerWiFile(String string) {
+            //registers WiFile so that phone can see client exists
             try {
                 ServerSocket s = new ServerSocket(0);
                 int wfPort = s.getLocalPort();
-                return ServiceInfo.create("_ftp._tcp.local.", string + "WiFile", wfPort,
+                myName = string + "WiFile";
+                return ServiceInfo.create("_ftp._tcp.local.", myName, wfPort,
                         "computer WiFile service");
                 
             } catch (IOException e) {
@@ -72,21 +84,23 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         
         @Override
         public void serviceAdded(ServiceEvent event) {
-            //System.out.println("Service added   : " + event.getName() + "." + event.getType());
             final String name = event.getName();
-        
-            System.out.println("ADD: " + name);
-            SwingUtilities.invokeLater(new Runnable() {
-            public void run() { services.addElement(name); }
-            });
-            //mJmdns.requestServiceInfo(event.getType(), event.getName());
+            if(name.equals(myName)) {
+                //don't add self
+            }else {
+                //adds to list
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        services.addElement(name);
+                    }
+                });
+            }
         }
 
         @Override
         public void serviceRemoved(ServiceEvent event) {
             final String name = event.getName();
-
-            System.out.println("REMOVE: " + name);
+            //removes from list
             SwingUtilities.invokeLater(new Runnable() {
             public void run() { services.removeElement(name); }
             });
@@ -94,39 +108,36 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
 
         @Override
         public void serviceResolved(ServiceEvent event) {
-            String name = event.getName();
-        String type = event.getType();
-        ServiceInfo info = event.getInfo();
+            //gets all of the service information from jmdns
 
-        if (name.equals(serviceList.getSelectedValue())) {
-            if (info == null) {
-                this.info.setText("service not found");
-            } else {
-                StringBuilder buf = new StringBuilder();
-                buf.append(name);
-                buf.append('.');
-                buf.append(type);
-                buf.append('\n');
-                buf.append(info.getAddress());
-                buf.append(':');
-                buf.append(info.getPort());
-                buf.append('\n');
-                for (Enumeration names = info.getPropertyNames() ; names.hasMoreElements() ; ) {
-                    String prop = (String)names.nextElement();
-                    buf.append(prop);
-                    buf.append('=');
-                    buf.append(info.getPropertyString(prop));
+            String name = event.getName();
+            String type = event.getType();
+            ServiceInfo info = event.getInfo();
+
+            if (name.equals(serviceList.getSelectedValue())) {
+                if (info == null) {
+                    this.info.setText("service not found");
+                } else {
+                    StringBuilder buf = new StringBuilder();
+                    buf.append(name);
+                    buf.append('.');
+                    buf.append(type);
                     buf.append('\n');
+                    buf.append(info.getAddress());
+                    buf.append(':');
+                    buf.append(info.getPort());
+                    buf.append('\n');
+                    for (Enumeration names = info.getPropertyNames() ; names.hasMoreElements() ; ) {
+                        String prop = (String)names.nextElement();
+                        buf.append(prop);
+                        buf.append('=');
+                        buf.append(info.getPropertyString(prop));
+                        buf.append('\n');
+                    }
+                    this.info.setText(buf.toString());
                 }
-                
-                this.info.setText(buf.toString());
             }
         }
-        }
-        
-    /**
-     * Creates new form WiFile
-     */
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -137,22 +148,21 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        RestartButton = new javax.swing.JButton();
-        StopButton = new javax.swing.JButton();
-        label1 = new java.awt.Label();
-        label2 = new java.awt.Label();
-        StartButton = new javax.swing.JButton();
+        ServiceLabel = new JLabel();
+        InfoLabel = new JLabel();
+        MyServiceLabel = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         info = new javax.swing.JTextArea();
         ConnectButton = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
         serviceList = new javax.swing.JList();
         jMenuBar1 = new javax.swing.JMenuBar();
-        jMenu1 = new javax.swing.JMenu();
-        jMenu2 = new javax.swing.JMenu();
+        SettingsMenu = new javax.swing.JMenu();
         SettingsItem = new javax.swing.JMenuItem();
 
-        //setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        //when WiFile window is closed, close the service discovery
+        //and say that it's not open
+        //this way the system tray icon can check if it is open or not
         addWindowListener( new WindowAdapter()
         {
             public void windowClosing(WindowEvent e)
@@ -163,7 +173,6 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                     public void run() {
                         try {
                             mJmdns.close();
-                            System.out.println("closed");
                             mOpen = false;
                         } catch (IOException e1) {
                             e1.printStackTrace();
@@ -176,30 +185,10 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         setIconImage(icon);
         setIconImages(null);
 
-        RestartButton.setText("Restart");
-        RestartButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                RestartButtonActionPerformed(evt);
-            }
-        });
+        ServiceLabel.setText("Available Devices");
 
-        StopButton.setText("Stop");
-        StopButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                StopButtonActionPerformed(evt);
-            }
-        });
-
-        label1.setText("Available Devices");
-
-        label2.setText("Information");
-
-        StartButton.setText("Start");
-        StartButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                StartButtonActionPerformed(evt);
-            }
-        });
+        InfoLabel.setText("Information");
+        MyServiceLabel.setText("My Service Name: " + myName);
 
         info.setColumns(20);
         info.setRows(5);
@@ -220,10 +209,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         });
         jScrollPane2.setViewportView(serviceList);
 
-        jMenu1.setText("File");
-        jMenuBar1.add(jMenu1);
-
-        jMenu2.setText("Settings");
+        SettingsMenu.setText("Settings");
 
         SettingsItem.setText("Open Settings");
         SettingsItem.addActionListener(new java.awt.event.ActionListener() {
@@ -231,150 +217,68 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                 SettingsItemActionPerformed(evt);
             }
         });
-        jMenu2.add(SettingsItem);
+        SettingsMenu.add(SettingsItem);
 
-        jMenuBar1.add(jMenu2);
+        jMenuBar1.add(SettingsMenu);
 
         setJMenuBar(jMenuBar1);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(StopButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(RestartButton, javax.swing.GroupLayout.DEFAULT_SIZE, 70, Short.MAX_VALUE)
-                    .addComponent(StartButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(label1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(label2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(13, 13, 13))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(ConnectButton)
-                        .addGap(32, 32, 32))))
+                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                        .addComponent(MyServiceLabel)
+                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                .addComponent(ServiceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGap(18, 18, 18)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(InfoLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                                .addComponent(ConnectButton)
+                                                .addGap(19, 19, 19)))
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(label1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(label2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(13, 13, 13)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(StartButton)
-                                .addGap(7, 7, 7)
-                                .addComponent(RestartButton)
+                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(MyServiceLabel)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(StopButton))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(ConnectButton)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 235, Short.MAX_VALUE))
-                .addContainerGap())
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(ServiceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(InfoLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(13, 13, 13)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(ConnectButton)
+                                                .addGap(0, 0, Short.MAX_VALUE))
+                                        .addComponent(jScrollPane2))
+                                .addContainerGap())
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void RestartButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RestartButtonActionPerformed
-        // TODO add your handling code here:
-
-        StopButtonActionPerformed(evt);
-        StartButtonActionPerformed(evt);
-    }//GEN-LAST:event_RestartButtonActionPerformed
-
-    private void StopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StopButtonActionPerformed
-        // TODO add your handling code here:
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    mJmdns.close();
-                    serviceList.removeAll();
-                    System.out.println("service discovery stopped");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }//GEN-LAST:event_StopButtonActionPerformed
-
-    private void StartButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartButtonActionPerformed
-        // TODO add your handling code here:
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                if (mJmdns == null) {
-                    try {
-                        InetAddress mIP;
-                        mIP = InetAddress.getLocalHost();
-                        String mHostname = InetAddress.getByName(mIP.getHostName()).toString();
-                        System.out.println(mIP.toString());
-                        setmJmdns(JmDNS.create(mIP, mHostname));
-                        System.out.println("I'm back baby");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    //mJmdns.addServiceListener(TYPE, this);
-                } else {
-                    //notify that it is already discovering
-                }
-            }
-        });
-    }//GEN-LAST:event_StartButtonActionPerformed
 
     private void ConnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConnectButtonActionPerformed
         // TODO add your handling code here:
-        Pearin p = new Pearin(this, true);
+        //asks user if they want to connect
+        DialogBox p = new DialogBox(this, true);
         p.setVisible(true);
-        
+
+        //if they do
         if(p.getReturnStatus() == 1) {
             if(current != null && current.hasData()) {
-                /*java.awt.EventQueue.invokeLater(new Runnable() {
-                        public void run() {*/
-                /*
-                try {
-                    
-                    System.out.println("I AM HERE");
-                    Socket sock = new Socket(current.getAddress(), current.getPort());
-                    System.out.println("or here");
-                    DataInputStream is = new DataInputStream(sock.getInputStream());
-                    System.out.println("or here");
-                    int input = is.readInt();
-                    System.out.println(input);
-                    sock.close();
-                    */
+                //this connects to the service to get port & files
                 Loading load1 = new Loading(current.getInetAddress(), current.getPort(), true);
-                              
-                
-                    //load1.setVisible(true);
-                    System.out.println("success");
-                 /*   
-                } catch (ConnectException e) {
-                    System.out.println("connect exception caught");
-                    return;
-                    /*
-                    Pearin f = new Pearin(this, true);
-                    f.setVisible(true);
-                    f.setLabel("Connection failed");
-                    
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } 
-                    */
-                //}});
             }
+            //otherwise say connection failed
         } else {
             JOptionPane.showMessageDialog(this,
                     "Connection Failed",
@@ -389,7 +293,6 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         if (name == null) {
             info.setText("unknown");
         } else {
-            //System.out.flush();
             current = mJmdns.getServiceInfo(TYPE, name);
             if (current == null || !current.hasData()) {
                 info.setText("service not found");
@@ -406,7 +309,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
     }//GEN-LAST:event_SettingsItemActionPerformed
 
 
-    //public static void main(String args[]) {
+    //default constructor
     WiFile() {
         mOpen = true;
         /* Set the Nimbus look and feel */
@@ -416,9 +319,7 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                System.out.println(info.getName());
                 if ("Windows".equals(info.getName())) {
-                    //MetalLookAndFeel.setCurrentTheme(new MetalLookAndFeel.DefaultMetalTheme());
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
@@ -441,7 +342,6 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                 @Override
                 public void run()
                 {
-                    System.out.println("Shutdown hook ran!");
                     try {
                         mJmdns.close();
                     } catch (IOException e) {
@@ -456,7 +356,6 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
                     InetAddress mIP;
                     mIP = InetAddress.getLocalHost();
                     String mHostname = InetAddress.getByName(mIP.getHostName()).toString();
-                    System.out.println(mIP.toString());
                     setmJmdns(JmDNS.create(mIP, mHostname)).setVisible(true);
                 } catch (UnknownHostException ex) {
                     Logger.getLogger(WiFile.class.getName()).log(Level.SEVERE, null, ex);
@@ -468,20 +367,29 @@ public class WiFile extends javax.swing.JFrame implements ServiceListener {
         
     }
 
+    //Obtain the image URL
+    protected static Image createImage(String path, String description) {
+        URL imageURL = BackgroundWiFile.class.getResource(imageName);
+
+        if (imageURL == null) {
+            System.err.println("Resource not found: " + path);
+            return null;
+        } else {
+            return (new ImageIcon(imageURL, description)).getImage();
+        }
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton ConnectButton;
-    private javax.swing.JButton RestartButton;
-    private javax.swing.JButton StartButton;
-    private javax.swing.JButton StopButton;
     private javax.swing.JTextArea info;
-    private javax.swing.JMenu jMenu1;
-    private javax.swing.JMenu jMenu2;
+    private javax.swing.JMenu SettingsMenu;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenuItem SettingsItem;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private java.awt.Label label1;
-    private java.awt.Label label2;
+    private JLabel ServiceLabel;
+    private JLabel InfoLabel;
+    private JLabel MyServiceLabel;
     private javax.swing.JList serviceList;
     // End of variables declaration//GEN-END:variables
 }

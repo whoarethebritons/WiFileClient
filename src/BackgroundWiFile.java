@@ -12,13 +12,14 @@ import java.net.URL;
 public class BackgroundWiFile {
     private static final String imageName = "/wifile.jpg";
     public static WiFile bwWiFile;
-    //public static void main(String[] args){
     public BackgroundWiFile(WiFile wlWiFile) {
         bwWiFile = wlWiFile;
         /* Use an appropriate Look and Feel */
         try {
             UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
-            //UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
+            if(UIManager.getLookAndFeel() == null) {
+                UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
+            }
         } catch (UnsupportedLookAndFeelException ex) {
             ex.printStackTrace();
         } catch (IllegalAccessException ex) {
@@ -50,15 +51,11 @@ public class BackgroundWiFile {
                 new TrayIcon(createImage(imageName, "tray icon"));
         final SystemTray tray = SystemTray.getSystemTray();
 
-        //MenuItem caseItem = new MenuItem("Create Support Case");
         MenuItem runItem = new MenuItem("Scan For Services");
-        //MenuItem contactItem = new MenuItem("");
         MenuItem exitItem = new MenuItem("Exit WiFile");
 
-        //popup.add(caseItem);
         popup.add(runItem);
         popup.add(exitItem);
-        //popup.add(contactItem);
 
         trayIcon.setPopupMenu(popup);
 
@@ -89,27 +86,6 @@ public class BackgroundWiFile {
                 }
             }
         });
-        /*contactItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(null,
-                        "Akins IT: 1(949)-407-7125");
-            }
-        });
-        caseItem.addActionListener(new ActionListener(){
-         public void actionPerformed(ActionEvent e){
-          URI oracle;
-    try {
-     oracle = new URI("http://www.akinsit.com/create-support-case");
-     Desktop.getDesktop().browse(oracle);
-    } catch (URISyntaxException e1) {
-     // TODO Auto-generated catch block
-     e1.printStackTrace();
-    } catch (IOException e1) {
-     // TODO Auto-generated catch block
-     e1.printStackTrace();
-    }
-            }
-        });*/
         //Automatically adjusts the size of the picture
         trayIcon.setImageAutoSize(true);
         //creates Hover Text

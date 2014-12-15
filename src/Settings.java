@@ -7,51 +7,25 @@
 
 import javax.swing.*;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Scanner;
 
 /**
  *
  * @author Eden
+ * creates Settings form that allows the user to change
+ * the broadcast name and file download location
+ * and writes these to wifilesettings.properties
+ * when done is pressed
  */
 public class Settings extends javax.swing.JFrame {
 
-    /**
-     * Creates new form Browser
-     */
-
-    //Properties properties = new Properties();
     String proplocal = "wifilesettings.properties";
-    //String DEVICE_KEY = "DEVICE_NAME_KEY", FILE_KEY = "FILE_LOCATION_KEY";
     OutputStream fos = null;
-    Scanner mFileScanner = null;
 
     public Settings() {
-        String first = WiFile.mProperties.getProperty(WiFile.FIRST_TIME, "YES");
-
-        if(first.equals("YES")) {
-            try {
-                fos = new FileOutputStream(proplocal);
-                WiFile.mProperties.setProperty(WiFile.DEVICE_KEY, "DNS");
-                WiFile.mProperties.setProperty(WiFile.FILE_KEY, "");
-                WiFile.mProperties.store(fos, null);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                if (fos != null) {
-                    try {
-                        fos.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-
         initComponents();
-        NameTextField.setText(WiFile.mProperties.getProperty(WiFile.DEVICE_KEY, "Default"));
+        NameTextField.setText(WiFile.mProperties.getProperty(WiFile.DEVICE_KEY, "DNS"));
         FileTextField.setText(WiFile.mProperties.getProperty(WiFile.FILE_KEY, ""));
     }
 
@@ -64,18 +38,16 @@ public class Settings extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        jLabel3 = new javax.swing.JLabel();
+        FileLabel = new javax.swing.JLabel();
         FileButton = new javax.swing.JButton();
         DoneButton = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
+        NameLabel = new javax.swing.JLabel();
         NameTextField = new javax.swing.JTextField();
         FileTextField = new JTextField();
-        jLabel2 = new javax.swing.JLabel();
+        GeneralLabel = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
 
-        //NameTextField.
-
-        jLabel3.setText("File Download Location");
+        FileLabel.setText("File Download Location");
 
         FileButton.setText("Open File Browser");
         FileButton.addActionListener(new java.awt.event.ActionListener() {
@@ -91,7 +63,7 @@ public class Settings extends javax.swing.JFrame {
             }
         });
 
-        jLabel1.setText("Device Name (for broadcasting)");
+        NameLabel.setText("Device Name (for broadcasting)");
 
         NameTextField.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
             public void propertyChange(java.beans.PropertyChangeEvent evt) {
@@ -99,7 +71,7 @@ public class Settings extends javax.swing.JFrame {
             }
         });
 
-        jLabel2.setText("General");
+        GeneralLabel.setText("General");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -115,12 +87,12 @@ public class Settings extends javax.swing.JFrame {
                                         .addGroup(layout.createSequentialGroup()
                                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addGroup(layout.createSequentialGroup()
-                                                                .addComponent(jLabel1)
+                                                                .addComponent(NameLabel)
                                                                 .addGap(18, 18, 18)
                                                                 .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                                        .addComponent(jLabel2)
+                                                        .addComponent(GeneralLabel)
                                                         .addGroup(layout.createSequentialGroup()
-                                                                .addComponent(jLabel3)
+                                                                .addComponent(FileLabel)
                                                                 .addGap(61, 61, 61)
                                                                 .addComponent(FileTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                                         .addGroup(layout.createSequentialGroup()
@@ -133,16 +105,16 @@ public class Settings extends javax.swing.JFrame {
                 layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(layout.createSequentialGroup()
                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(jLabel2)
+                                .addComponent(GeneralLabel)
                                 .addGap(2, 2, 2)
                                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jLabel1)
+                                        .addComponent(NameLabel)
                                         .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addGap(18, 18, 18)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jLabel3)
+                                        .addComponent(FileLabel)
                                         .addComponent(FileTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(FileButton)
@@ -152,25 +124,21 @@ public class Settings extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    //when the user presses the button to change the folder
     private void FileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FileButtonActionPerformed
         // TODO add your handling code here:
+        //creates a new FileBrowser so user can select the folder to store their files in
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 FileBrowser b = new FileBrowser();
                 String s = b.getReturnPath();
-/*
-        JFileChooser jFileChooser1 = new JFileChooser();
-        int returnVal;
-        returnVal = jFileChooser1.showDialog(this.getParent(), "true");
-        */
-                System.out.println("Browser got: " + s);
                 FileTextField.setText(s);
-
             }
         });
 
     }//GEN-LAST:event_FileButtonActionPerformed
 
+    //when the user presses done
     private void DoneButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FileButtonActionPerformed
         // TODO add your handling code here:
 
@@ -180,24 +148,18 @@ public class Settings extends javax.swing.JFrame {
             WiFile.mProperties.setProperty(WiFile.DEVICE_KEY, NameTextField.getText());
             WiFile.mProperties.setProperty(WiFile.FILE_KEY, FileTextField.getText());
             WiFile.mProperties.store(fos, null);
-
-
-            mFileScanner = new Scanner(new FileReader(proplocal));
-            while(mFileScanner.hasNext()) {
-                System.out.println(mFileScanner.nextLine());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             if (fos != null) {
                 try {
-                    mFileScanner.close();
                     fos.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
+        //then disposes of the window
         this.dispose();
 
     }//GEN-LAST:event_FileButtonActionPerformed
@@ -205,46 +167,13 @@ public class Settings extends javax.swing.JFrame {
     private void NameTextFieldPropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_NameTextFieldPropertyChange
         // TODO add your handling code here:
     }//GEN-LAST:event_NameTextFieldPropertyChange
-    public static void main(String[] args) {
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                System.out.println(info.getName());
-                if ("Windows".equals(info.getName())) {
-                    //MetalLookAndFeel.setCurrentTheme(new MetalLookAndFeel.DefaultMetalTheme());
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-            if(UIManager.getLookAndFeel() == null) {
-                javax.swing.UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Settings().setVisible(true);
-                //new Browse();//.setVisible(true);
-
-            }
-        });
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton FileButton;
     private javax.swing.JButton DoneButton;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel NameLabel;
+    private javax.swing.JLabel GeneralLabel;
+    private javax.swing.JLabel FileLabel;
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JTextField NameTextField;
     private javax.swing.JTextField FileTextField;
